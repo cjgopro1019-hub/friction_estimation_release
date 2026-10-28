@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ssa_estimation_v2_cpp</name>
+  <version>0.0.1</version>
+  <description>
+    v2 fork of 3DVehicleDynamicsStateEstimation's ssa_estimation_cpp: same UKF design and
+    state vector, extended with vehicle_model_v2_cpp's physics (dynamic tire radius,
+    longitudinal load transfer, richer force-balance evidence path) and a wheel-speed-
+    difference outlier guard in adaptR. Reuses ssa_estimation_cpp's state_machine.hpp
+    unchanged rather than forking it. See ukf_impl.hpp for the full list of what changed.
+  </description>
+  <maintainer email="placeholder@example.com">friction_estimation project</maintainer>
+  <license>LGPLv3</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>param_manager_cpp</depend>
+  <depend>tum_types_cpp</depend>
+  <depend>tum_helpers_cpp</depend>
+  <depend>tum_type_conversions_ros_cpp</depend>
+  <depend>ssa_estimation_constants</depend>
+  <depend>ssa_estimation_base</depend>
+  <depend>ssa_estimation_cpp</depend>
+  <depend>imu_handler</depend>
+  <depend>classical_filter</depend>
+  <depend>vehicle_model_v2_cpp</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

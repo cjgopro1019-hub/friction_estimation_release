@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>state_estimation_node_v2_cpp</name>
+  <version>0.0.1</version>
+  <description>
+    v2 node executable: reuses the ORIGINAL, unmodified, generic stateEstimationNode&lt;TConfig&gt;
+    template from state_estimation_node_cpp (it takes the concrete StateEstimationBase
+    implementation as a constructor argument, so it never needed forking) -- only
+    constructs state_estimation_v2_cpp's StateEstimationV2 (with the outlier-rejection
+    fix) instead of the original's StateEstimation. See state_estimation_v2_cpp's
+    package.xml for what changed and why.
+  </description>
+  <maintainer email="placeholder@example.com">friction_estimation project</maintainer>
+  <license>LGPLv3</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>param_manager_cpp</depend>
+  <depend>ros_param_helpers_cpp</depend>
+  <depend>ros_debug_helpers_cpp</depend>
+  <depend>tum_types_cpp</depend>
+  <depend>tum_helpers_cpp</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>state_estimation_node_cpp</depend>
+  <depend>state_estimation_v2_cpp</depend>
+  <depend>state_estimation_cpp</depend>
+  <depend>state_estimation_base</depend>
+  <depend>state_estimation_constants</depend>
+  <depend>msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>tum_type_conversions_ros_cpp</depend>
+  <depend>ros2_watchdog_cpp</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <exec_depend>ros2launch</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

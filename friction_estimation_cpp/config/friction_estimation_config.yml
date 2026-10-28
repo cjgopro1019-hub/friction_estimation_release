@@ -1,0 +1,155 @@
+/core/friction:
+  FrictionEstimation:
+    ros__parameters:
+      # --- friction demand (always active) ---
+      # Reused from ssa_estimation_ukf_config.yml, values copied on purpose,
+      # manual sync accepted -- see design notes.
+      P_VDC_mass_kg: 800.00
+      P_VDC_rho_air_kgpm3: 1.22
+      P_VDC_cL_front: -0.7
+      P_VDC_cL_rear: -0.7
+
+      P_VDC_l_front_m: 1.724
+      P_VDC_l_rear_m: 1.247
+      P_VDC_Izz_kgm2: 1000.00
+
+      # --- input health ---
+      # Staleness timeout shared by all inputs for now (native rate is 100Hz, i.e. a
+      # message every 10ms -- 0.1s allows ~10 missed cycles before flagging stale).
+      # Plausibility bounds (max abs value, max jump per cycle) live in code for now
+      # (input_health.hpp guards in friction_estimation_node.hpp) -- generous physical
+      # limits meant to catch sensor glitches, not tuned confidence intervals.
+      P_VDC_input_staleness_timeout_s: 0.1
+
+      # --- data quality gating (vy-independent) ---
+      # Only excludes genuinely-invalid samples: wheel lockup/pure spin, suspected
+      # ABS/TC intervention, sensor faults. Deliberately does NOT exclude high slip or
+      # high yaw-rate mismatch on their own -- those are handled (and rewarded, not
+      # punished) by the excitation evaluator below. This replaces the old
+      # peak_validity_gates.hpp SlipRatioGate/YawMismatchGate/PostPeakDropoffGate, which
+      # treated near-limit operation itself as a reason to reject a sample.
+      P_VDC_wheel_lockout_threshold: 0.6   # near-total loss of wheel/ground correlation
+      P_VDC_track_width_front_m: 1.639
+      P_VDC_track_width_rear_m: 1.524
+      P_VDC_tire_radius_front_m: 0.2958
+      P_VDC_tire_radius_rear_m: 0.3099
+
+      # ABS/TC proxy: this dataset has no direct ABS/TC status flag, so this is a
+      # first-pass heuristic (rapid brake-pressure oscillation) -- NOT validated against
+      # a confirmed genuine ABS event (vegas24_pub has never shown one, see project
+      # notes: a rapid brake-pressure-pulsing window at t~56.6-57.1s was found but ruled
+      # out as genuine ABS since wheelspeed showed no sawtooth recovery pattern).
+      P_VDC_abs_brake_pressure_rate_threshold_pa_per_s: 2.0e6
+      P_VDC_abs_oscillation_window_samples: 20
+      P_VDC_abs_oscillation_min_sign_changes: 4
+
+      # --- excitation evaluator (vy-independent) ---
+      # Scores how informative the current sample is about the true friction limit, as
+      # score = max(kappa_util, lat_force_util) -- both a tire-saturation UTILIZATION
+      # RATIO (observed force / the peak the MF_Simple tire model predicts is
+      # available), not a raw signal compared to an arbitrary constant. See
+      # excitation_evaluator.hpp's class doc for the full derivation and for why this is
+      # a max() of two terms rather than the earlier (2026-09-28) weighted sum of three:
+      # Task 3's sensitivity/ablation analysis (2026-09-29, TODO_Advisor_Action_Items.md)
+      # found the third term (mu_demand/mu_potential) 0.94-correlated with
+      # lat_force_util and self-referential (mu_potential is itself built from
+      # mu_demand's own history), and found the weighted-sum structure itself
+      # systematically under-scored any sample saturated on only one axis. No weights
+      # left to set for the two remaining terms -- max() has no free parameter to tune.
+      # B, C, D, E -- same values/convention as ssa_estimation_v2_ukf_config.yml's
+      # P_VDC_tire_MF_long_front etc (manual sync accepted, see design notes at top).
+      P_VDC_tire_MF_long_front: [20.00, 1.80, 1.65, 1.00]
+      P_VDC_tire_MF_long_rear: [20.00, 1.80, 1.70, 1.00]
+      P_VDC_tire_MF_lat_front: [22.00, 2.20, 1.60, 1.00]
+      P_VDC_tire_MF_lat_rear: [20.00, 2.00, 1.65, 1.00]
+
+      # --- friction potential tracker (vy-independent, excitation-gated) ---
+      # Forgetting-factor tracker, NOT a monotonic running max -- decays toward lower
+      # observed demand so a road-surface change (high-mu -> low-mu) is reflected rather
+      # than staying locked at a stale peak. decay_rate/confidence_tau are first-pass
+      # values, not yet tuned against real data (this dataset has no confirmed
+      # surface-change event to validate the decay behavior against).
+      #
+      # Rising to at least mu_demand is now a HARD, UNCONDITIONAL, IMMEDIATE floor
+      # (no excitation gate, no ramp -- see friction_potential_tracker.hpp): mu_demand
+      # is always a rigorous lower bound on the true mu_max, so mu_potential reading
+      # below it is a proven contradiction, not ambiguous evidence. excitation_threshold
+      # below now only gates the DECAY direction (pulling down toward a lower observed
+      # demand), which stays genuinely ambiguous -- a quiet moment doesn't prove the
+      # limit dropped.
+      #
+      # 2026-09-30: re-tuned from 0.5 to 0.6 after the score formula changed to
+      # max(kappa_util, lat_force_util) (that alone shifts the score distribution up,
+      # so 0.5 no longer means what it used to) -- picked by cross-checking against the
+      # INDEPENDENT Kistler-derived mu_demand (not our own EKF signal chain): swept
+      # threshold in {0.3..0.8} and measured the gap between mean Kistler mu_demand
+      # above vs below each threshold (a real "does crossing this line actually
+      # correspond to independently-measured high demand" check, not a self-referential
+      # one). Gap grows from 0.34 (thr=0.3) to a peak of 0.47 (thr=0.7), but thr=0.7 only
+      # fires 5 times over the whole 86.5s replay (too rare to be functionally useful,
+      # and the gap estimate there rests on too few samples to trust); thr=0.6 keeps
+      # most of that separation (gap=0.38) while still firing 58 times -- the best
+      # tradeoff found, not a claim that 0.6 is uniquely optimal. See
+      # TODO_Advisor_Action_Items.md Task 3 for the full sweep table and
+      # docs/figures/sensitivity_sweep.png.
+      P_VDC_potential_excitation_threshold: 0.6
+      P_VDC_potential_decay_rate_per_s: 0.05
+      # confidence ~= exp(-time_since_last_confirm/tau); 3.3s -> confidence is already
+      # negligible (~5%) after 10s without a fresh confirming update.
+      P_VDC_potential_confidence_decay_tau_s: 3.3
+      # Lowered from a previous, evidence-free 0.9 guess -- 0.5 sits within this
+      # dataset's own observed mu_demand range, so the hard floor above actually gets
+      # exercised by real data through the session.
+      P_VDC_potential_init: 0.5
+      P_VDC_potential_min: 0.1
+      # Hard physical ceiling on combined mu -- no passenger/race tire on asphalt is
+      # expected to exceed roughly this envelope; guards against a runaway estimate.
+      P_VDC_potential_max: 1.3
+      # Soft confidence boost from the slip-slope observers below (P_VDC_slip_slope_*)
+      # -- max fraction of the remaining gap to full confidence (1.0) closed when an
+      # axle's online kappa-vs-mu_x model both trusts itself and agrees with this
+      # cycle's mu_demand. NOT a gate on whether mu_potential updates -- only raises
+      # potential_confidence, never lowers it or blocks an update. 0.3 is a first-pass
+      # value (deliberately modest -- a genuine "nudge", not something that alone can
+      # manufacture full confidence out of a stale estimate).
+      P_VDC_potential_corroboration_weight: 0.3
+
+      # eta_wear = exp(-k * S), S = cumulative slip energy (J).
+      #
+      # 2026-08-19: attempted to re-calibrate this against the new wheelspeed-derived
+      # longitudinal-slip S basis (which is a genuinely different physical quantity and
+      # scale from the old beta/lateral-slip basis this value was originally tuned
+      # against -- measured S came out ~13-190x larger depending on measurement run,
+      # see git history for the investigation trail), but the recalibration was
+      # DELIBERATELY ABANDONED mid-investigation for an architectural reason, not
+      # dropped for lack of a number: a fixed k tuned against ONE vehicle's data
+      # (still only ever vegas24_pub) cannot be assumed to carry over to a
+      # structurally different vehicle -- exactly the same objection this project
+      # already acted on for slip-slope (see slip_slope_observer.hpp), which is why
+      # that became an online, self-calibrating observer instead of a pre-tuned
+      # coefficient. Wear/tire-degradation modeling deserves the same treatment
+      # (online, confidence-gated, learned per vehicle/session) rather than another
+      # single-car magic number -- not yet designed or implemented. This value is
+      # LEFT AT ITS OLD, KNOWN-STALE SETTING (tuned against a basis this formula no
+      # longer uses) as an explicit placeholder, not a working calibration -- treat
+      # eta_wear/mu_eff as unvalidated until this is redesigned.
+      P_VDC_wear_energy_coefficient: 1.4e-6
+
+      # --- slip-slope observers (diagnostic only, not load-bearing yet) ---
+      # Online, self-calibrating per-axle mu_x-vs-kappa observers -- NOT a pre-tuned
+      # per-vehicle slope. Confidence ramps from 0 as (a) effective sample count and
+      # (b) max|kappa| actually observed both grow, so a fresh vehicle/session starts
+      # fully conservative and only "explores" the relationship as real high-slip
+      # evidence shows up -- see slip_slope_observer.hpp and
+      # research/slip_slope_analysis.py (this vehicle: rear axle showed a real
+      # relationship, R^2=0.35, front did not, R^2=0.03 -- but that is NOT hardcoded
+      # here, both axles run independently so a structurally different vehicle (e.g.
+      # AWD) isn't forced into this RWD car's pattern).
+      P_VDC_slip_slope_forgetting_factor: 0.999
+      P_VDC_slip_slope_min_samples_for_confidence: 200.0
+      P_VDC_slip_slope_min_kappa_coverage: 0.02
+      P_VDC_slip_slope_consistency_tolerance: 0.05
+
+      # Still not implemented:
+      #   P_VDC_enable_tire_temp_model, P_VDC_has_drs
+      #   per-axle friction potential (current model is whole-vehicle proxy)

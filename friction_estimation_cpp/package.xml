@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>friction_estimation_cpp</name>
+  <version>0.0.1</version>
+  <description>Two-tier grip/mu estimator: kinematic friction demand (Tier 1) gating a road-mu parameter estimator (Tier 2)</description>
+  <maintainer email="cjgopro1019@gmail.com">TODO</maintainer>
+  <license>LGPLv3</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>friction_estimation_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>msgs</depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>state_publisher</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>state_estimation_node_v2_cpp</exec_depend>
+  <exec_depend>ssa_estimation_node_cpp</exec_depend>
+  <exec_depend>ssa_estimation_v2_node_cpp</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

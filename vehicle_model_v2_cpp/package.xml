@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>vehicle_model_v2_cpp</name>
+  <version>0.0.1</version>
+  <description>
+    Vehicle/tire physics for the v2 SSA-UKF fork: dynamic tire radius, longitudinal load
+    transfer, aero drag + rolling resistance in the force-balance evidence path. Ported by
+    hand (not vendored) from TUMFTM/GPTireUKF's vehicle_model_cpp, scoped down -- see the
+    header comment in vehicle_model.hpp for exactly what was and wasn't ported.
+  </description>
+  <maintainer email="placeholder@example.com">friction_estimation project</maintainer>
+  <license>LGPLv3</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
